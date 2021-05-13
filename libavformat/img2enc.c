@@ -32,6 +32,8 @@
 #include "avio_internal.h"
 #include "internal.h"
 #include "img2.h"
+#include <sys/time.h>
+#include "libavutil/strftime_millis.h"
 
 typedef struct VideoMuxData {
     const AVClass *class;  /**< Class for private options. */
@@ -139,14 +141,21 @@ static int write_packet(AVFormatContext *s, AVPacket *pkt)
     if (img->update) {
         av_strlcpy(filename, img->path, sizeof(filename));
     } else if (img->use_strftime) {
-        time_t now0;
-        struct tm *tm, tmpbuf;
-        time(&now0);
-        tm = localtime_r(&now0, &tmpbuf);
-        if (!strftime(filename, sizeof(filename), img->path, tm)) {
+	struct timeval tv;
+	gettimeofday(&tv,NULL);
+        if (!strftime_millis(filename, sizeof(filename), img->path, &tv)) {
+            /////av_log(oc, AV_LOG_ERROR, "Could not get segment filename with strftime\n");
             av_log(s, AV_LOG_ERROR, "Could not get frame filename with strftime\n");
             return AVERROR(EINVAL);
         }
+        ///// time_t now0;
+        ///// struct tm *tm, tmpbuf;
+        ///// time(&now0);
+        ///// tm = localtime_r(&now0, &tmpbuf);
+        ///// if (!strftime(filename, sizeof(filename), img->path, tm)) {
+        /////     av_log(s, AV_LOG_ERROR, "Could not get frame filename with strftime\n");
+        /////     return AVERROR(EINVAL);
+        ///// }
     } else if (img->frame_pts) {
         if (av_get_frame_filename2(filename, sizeof(filename), img->path, pkt->pts, AV_FRAME_FILENAME_FLAGS_MULTIPLE) < 0) {
             av_log(s, AV_LOG_ERROR, "Cannot write filename by pts of the frames.");
